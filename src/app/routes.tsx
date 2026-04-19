@@ -1,8 +1,10 @@
 import { createBrowserRouter } from "react-router";
-import { LoginPage } from "./components/LoginPage";
-import { MenuPage } from "./components/MenuPage";
-import { CartPage } from "./components/CartPage";
-import { OrdersPage } from "./components/OrdersPage";
+// Fixed paths: Pages are in ./pages/
+import { LoginPage } from "./pages/LoginPage";
+import { MenuPage } from "./pages/MenuPage";
+import { CartPage } from "./pages/CartPage";
+import { OrdersPage } from "./pages/OrdersPage";
+// Layout and Dashboard are in ./components/
 import { StaffDashboard } from "./components/StaffDashboard";
 import { Layout } from "./components/Layout";
 

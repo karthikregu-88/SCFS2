@@ -1,271 +1,271 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Clock, ChefHat, Package, CheckCircle, TrendingUp } from 'lucide-react';
-import { Order } from '../types';
-import { mockOrders } from '../data/mockData';
+import { 
+  Camera, 
+  Mail, 
+  User, 
+  Trash2, 
+  Plus, 
+  Clock, 
+  IndianRupee, 
+  LayoutDashboard, 
+  LogOut, 
+  CheckCircle2, 
+  AlertCircle 
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 export function StaffDashboard() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({ name: '', price: 0, image: '', category: 'Main Course', description: '' });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 1. Data Refresh Logic (Polling every 5 seconds)
+  const refreshData = async () => {
+    try {
+      const menuRes = await fetch('http://localhost:8000/menu');
+      if (menuRes.ok) {
+        const data = await menuRes.json();
+        setMenuItems(Array.isArray(data) ? data : []);
+      }
+
+      const orderRes = await fetch('http://localhost:8000/admin/orders');
+      if (orderRes.ok) {
+        const data = await orderRes.json();
+        setOrders(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error("Sync Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    loadOrders();
-    
-    // Auto-refresh orders
-    const interval = setInterval(() => {
-      loadOrders();
-    }, 3000);
-
+    refreshData();
+    const interval = setInterval(refreshData, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const loadOrders = () => {
-    const savedOrders = localStorage.getItem('orders');
-    const allOrders = savedOrders ? JSON.parse(savedOrders) : mockOrders;
-    setOrders(allOrders);
-  };
-
-  const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    const updatedOrders = orders.map(order =>
-      order.id === orderId ? { ...order, status: newStatus } : order
-    );
-    setOrders(updatedOrders);
-    localStorage.setItem('orders', JSON.stringify(updatedOrders));
-  };
-
-  const getOrdersByStatus = (status: Order['status']) => {
-    return orders.filter(order => order.status === status);
-  };
-
-  const formatTime = (date: Date) => {
-    const orderDate = new Date(date);
-    const hours = orderDate.getHours();
-    const minutes = orderDate.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const formattedHours = hours % 12 || 12;
-    return `${formattedHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-  };
-
-  const getNextStatus = (currentStatus: Order['status']): Order['status'] | null => {
-    switch (currentStatus) {
-      case 'pending': return 'preparing';
-      case 'preparing': return 'ready';
-      case 'ready': return 'completed';
-      case 'completed': return null;
+  // 2. Image Handling (Camera/Files)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setFormData({ ...formData, image: reader.result as string });
+      reader.readAsDataURL(file);
     }
   };
 
-  const getNextStatusLabel = (currentStatus: Order['status']): string => {
-    switch (currentStatus) {
-      case 'pending': return 'Start Preparing';
-      case 'preparing': return 'Mark as Ready';
-      case 'ready': return 'Complete Order';
-      default: return '';
+  // 3. Menu CRUD Logic
+  const handleAddItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.image) return toast.error("Please add a photo of the dish");
+
+    const res = await fetch('http://localhost:8000/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+
+    if (res.ok) {
+      toast.success("Dish published to canteen menu");
+      setFormData({ name: '', price: 0, image: '', category: 'Main Course', description: '' });
+      refreshData();
     }
   };
 
-  const renderOrderCard = (order: Order) => {
-    const nextStatus = getNextStatus(order.status);
-    
-    return (
-      <Card key={order.id} className="mb-4">
-        <CardHeader className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div>
-              <CardTitle className="text-base sm:text-lg">Order #{order.id}</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
-                {order.userName} • {formatTime(order.timestamp)}
-              </CardDescription>
-            </div>
-            <Badge variant="secondary" className="text-base sm:text-lg px-3 py-1 self-start">
-              ₹{order.total.toFixed(2)}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0">
-          <div className="space-y-3 mb-4">
-            {order.items.map((item) => (
-              <div key={item.id} className="flex justify-between items-center">
-                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                  <Badge variant="outline" className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs flex-shrink-0">
-                    {item.quantity}×
-                  </Badge>
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm sm:text-base truncate">{item.name}</p>
-                    <p className="text-xs sm:text-sm text-gray-600">₹{item.price}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {nextStatus && (
-            <Button
-              onClick={() => updateOrderStatus(order.id, nextStatus)}
-              className="w-full bg-orange-600 hover:bg-orange-700 h-10 sm:h-11 text-sm sm:text-base"
-            >
-              {getNextStatusLabel(order.status)}
-            </Button>
-          )}
-          
-          {order.status === 'completed' && (
-            <div className="flex items-center justify-center gap-2 text-green-600 py-2">
-              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="font-medium text-sm sm:text-base">Order Completed</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const pendingOrders = getOrdersByStatus('pending');
-  const preparingOrders = getOrdersByStatus('preparing');
-  const readyOrders = getOrdersByStatus('ready');
-  const completedOrders = getOrdersByStatus('completed');
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center bg-slate-900 text-indigo-400 font-bold tracking-widest animate-pulse">
+      INITIALIZING ADMIN PORTAL...
+    </div>
+  );
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-[1440px] mx-auto">
-      {/* Page Header */}
-      <div className="mb-6 sm:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Staff Dashboard</h2>
-        <p className="text-sm sm:text-base text-gray-600">Manage and process customer orders</p>
+    <div className="min-h-screen bg-slate-50">
+      {/* PROFESSIONAL ADMIN HEADER */}
+      <nav className="bg-slate-900 text-white px-6 py-4 border-b border-slate-800 shadow-xl">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-600 p-2 rounded-lg shadow-lg shadow-indigo-500/20">
+              <LayoutDashboard size={22} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight leading-none uppercase">CVR Admin</h1>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Canteen Management System</span>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            className="text-slate-400 hover:text-white hover:bg-slate-800 gap-2"
+            onClick={() => { localStorage.clear(); window.location.reload(); }}
+          >
+            <LogOut size={18} /> <span className="text-xs font-bold uppercase">Logout</span>
+          </Button>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto p-6 md:p-10 space-y-10">
+        <Tabs defaultValue="orders" className="w-full">
+          <TabsList className="bg-white border p-1.5 shadow-sm inline-flex mb-8">
+            <TabsTrigger value="orders" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Active Orders</TabsTrigger>
+            <TabsTrigger value="menu" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Canteen Menu</TabsTrigger>
+          </TabsList>
+
+          {/* TAB 1: STUDENT ORDERS VIEW */}
+          <TabsContent value="orders">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {orders.length === 0 ? (
+                <div className="col-span-full py-32 text-center border-2 border-dashed border-slate-200 rounded-3xl">
+                  <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="text-slate-300" size={32} />
+                  </div>
+                  <p className="text-slate-400 font-bold uppercase text-sm tracking-widest">No Active Orders found</p>
+                </div>
+              ) : (
+                orders.map((order) => (
+                  <Card key={order.id} className="border-none shadow-lg hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden group">
+                    <div className={`h-1.5 w-full ${order.paid ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                    
+                    <CardHeader className="flex flex-row justify-between items-center py-4 bg-slate-50/50 px-6">
+                      <span className="text-[11px] font-black text-slate-400 tracking-widest">#{order.id}</span>
+                      <Badge className={order.paid ? "bg-emerald-100 text-emerald-700 border-none shadow-sm" : "bg-rose-100 text-rose-700 border-none shadow-sm"}>
+                        {order.paid ? "PAYMENT DONE" : "PENDING"}
+                      </Badge>
+                    </CardHeader>
+
+                    <CardContent className="p-6 space-y-6">
+                      {/* Student Info Section */}
+                      <div className="flex items-start gap-4">
+                        <div className="bg-indigo-50 p-2.5 rounded-xl border border-indigo-100">
+                          <User size={18} className="text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-900 leading-none mb-1">{order.name}</p>
+                          <p className="text-xs font-medium text-slate-400 flex items-center gap-1">
+                            <Mail size={12} /> {order.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Items List Section */}
+                      <div className="space-y-3 py-4 border-y border-slate-100">
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2">Order Summary</p>
+                        {order.items?.map((item: any, i: number) => (
+                          <div key={i} className="flex justify-between items-center text-sm">
+                            <span className="font-bold text-slate-700">{item.name}</span>
+                            <span className="bg-slate-100 text-slate-900 px-2 py-0.5 rounded-md font-black text-[10px]">x{item.qty}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Footer Section */}
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-black uppercase tracking-tighter">
+                          <Clock size={12} /> {order.time}
+                        </div>
+                        <div className="text-2xl font-black text-indigo-700 flex items-center tracking-tighter">
+                          <IndianRupee size={18} className="mr-0.5" />{order.total}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          {/* TAB 2: MENU MANAGEMENT VIEW */}
+          <TabsContent value="menu">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+              {/* ENTRY PANEL */}
+              <Card className="lg:col-span-1 shadow-2xl border-none h-fit rounded-3xl overflow-hidden">
+                <div className="bg-slate-900 p-6 text-white">
+                  <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-2">
+                    <Plus size={20} className="text-indigo-400" /> Add Dish
+                  </h2>
+                </div>
+                <CardContent className="p-6">
+                  <form onSubmit={handleAddItem} className="space-y-6">
+                    <div 
+                      className="group relative h-52 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 transition-all overflow-hidden"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {formData.image ? (
+                        <img src={formData.image} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-center group-hover:scale-110 transition-transform">
+                          <div className="bg-white p-4 rounded-full shadow-md mb-3 mx-auto w-fit">
+                            <Camera className="text-indigo-500" size={24} />
+                          </div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Snap or Upload Photo</p>
+                        </div>
+                      )}
+                    </div>
+                    <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileUpload} />
+                    
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Dish Name</Label>
+                      <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Samosa" required className="bg-slate-50 border-none h-12" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Price (₹)</Label>
+                      <Input type="number" value={formData.price} onChange={e => setFormData({...formData, price: parseFloat(e.target.value)})} placeholder="0" required className="bg-slate-50 border-none h-12" />
+                    </div>
+
+                    <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-14 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20">
+                      Publish Dish
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* LIST PANEL */}
+              <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {menuItems.map((item) => (
+                  <Card key={item.id} className="flex flex-row h-40 border-none shadow-md rounded-3xl overflow-hidden bg-white group hover:shadow-xl transition-all">
+                    <div className="w-40 h-full overflow-hidden">
+                      <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                    <CardContent className="p-6 flex-1 flex flex-col justify-between">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-black text-slate-800 text-lg leading-tight uppercase tracking-tight">{item.name}</h3>
+                          <Badge variant="secondary" className="text-[9px] font-bold mt-1 uppercase bg-slate-100">{item.category}</Badge>
+                        </div>
+                        <p className="text-xl font-black text-indigo-600 tracking-tighter">₹{item.price}</p>
+                      </div>
+                      <div className="flex justify-end pt-4">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full"
+                          onClick={async () => {
+                            if(window.confirm("Remove this dish from the canteen?")) {
+                              await fetch(`http://localhost:8000/menu/${item.id}`, { method: 'DELETE' });
+                              refreshData();
+                            }
+                          }}
+                        >
+                          <Trash2 size={20}/>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0">
-            <div className="text-xl sm:text-2xl font-bold">{pendingOrders.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">Preparing</CardTitle>
-            <ChefHat className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0">
-            <div className="text-xl sm:text-2xl font-bold">{preparingOrders.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">Ready</CardTitle>
-            <Package className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0">
-            <div className="text-xl sm:text-2xl font-bold">{readyOrders.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">Total Orders</CardTitle>
-            <TrendingUp className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0">
-            <div className="text-xl sm:text-2xl font-bold">{orders.length}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Orders by Status */}
-      <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-auto p-1">
-          <TabsTrigger value="pending" className="relative text-xs sm:text-sm py-2 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-            <span className="hidden sm:inline">Pending</span>
-            <span className="sm:hidden">Pending</span>
-            {pendingOrders.length > 0 && (
-              <Badge className="bg-yellow-600 h-5 w-5 sm:h-auto sm:w-auto text-[10px] sm:text-xs p-0 sm:px-2">{pendingOrders.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="preparing" className="relative text-xs sm:text-sm py-2 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-            <span className="hidden sm:inline">Preparing</span>
-            <span className="sm:hidden">Prep</span>
-            {preparingOrders.length > 0 && (
-              <Badge className="bg-blue-600 h-5 w-5 sm:h-auto sm:w-auto text-[10px] sm:text-xs p-0 sm:px-2">{preparingOrders.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="ready" className="relative text-xs sm:text-sm py-2 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-            <span>Ready</span>
-            {readyOrders.length > 0 && (
-              <Badge className="bg-green-600 h-5 w-5 sm:h-auto sm:w-auto text-[10px] sm:text-xs p-0 sm:px-2">{readyOrders.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="text-xs sm:text-sm py-2">
-            <span className="hidden sm:inline">Completed</span>
-            <span className="sm:hidden">Done</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="pending" className="mt-4 sm:mt-6">
-          {pendingOrders.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {pendingOrders.map(renderOrderCard)}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
-                <Clock className="h-12 sm:h-16 w-12 sm:w-16 text-gray-300 mb-4" />
-                <p className="text-sm sm:text-base text-gray-600">No pending orders</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="preparing" className="mt-4 sm:mt-6">
-          {preparingOrders.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {preparingOrders.map(renderOrderCard)}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
-                <ChefHat className="h-12 sm:h-16 w-12 sm:w-16 text-gray-300 mb-4" />
-                <p className="text-sm sm:text-base text-gray-600">No orders being prepared</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="ready" className="mt-4 sm:mt-6">
-          {readyOrders.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {readyOrders.map(renderOrderCard)}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
-                <Package className="h-12 sm:h-16 w-12 sm:w-16 text-gray-300 mb-4" />
-                <p className="text-sm sm:text-base text-gray-600">No orders ready for pickup</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="completed" className="mt-4 sm:mt-6">
-          {completedOrders.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {completedOrders.map(renderOrderCard)}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
-                <CheckCircle className="h-12 sm:h-16 w-12 sm:w-16 text-gray-300 mb-4" />
-                <p className="text-sm sm:text-base text-gray-600">No completed orders</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

@@ -1,27 +1,28 @@
+import uuid
+from datetime import datetime
+from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_all, Column, String, Float, Boolean, Integer, ForeignKey, DateTime, Text
+from sqlalchemy import create_engine, Column, String, Float, Boolean, Integer, ForeignKey, DateTime, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from pydantic import BaseModel
-from datetime import datetime
-from typing import List, Optional
-import uuid
 
-# Database Setup
+# --- CONFIG ---
+COLLEGE_DOMAIN = "@cvr.ac.in"
 SQLALCHEMY_DATABASE_URL = "sqlite:///./scfs.db"
 Base = declarative_base()
-engine = create_all(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# --- SQLAlchemy Models ---
+# --- MODELS ---
 class UserDB(Base):
     __tablename__ = "users"
     id = Column(String, primary_key=True)
     name = Column(String)
     email = Column(String, unique=True)
     password = Column(String)
-    role = Column(String) # 'customer' or 'admin'
+    role = Column(String)
 
 class FoodItemDB(Base):
     __tablename__ = "food_items"
@@ -30,65 +31,59 @@ class FoodItemDB(Base):
     description = Column(Text)
     price = Column(Float)
     category = Column(String)
-    image = Column(String)
+    image = Column(Text) # Supports large Base64 strings
     available = Column(Boolean, default=True)
 
 class OrderDB(Base):
     __tablename__ = "orders"
     id = Column(String, primary_key=True)
-    user_id = Column(String, ForeignKey("users.id"))
     user_name = Column(String)
+    user_email = Column(String)
     total = Column(Float)
-    status = Column(String) # 'pending', 'preparing', 'ready', 'completed'
-    order_time = Column(DateTime, default=datetime.utcnow)
-    payment_id = Column(String, nullable=True)
+    status = Column(String, default="Pending")
+    payment_done = Column(Boolean, default=False)
+    razorpay_id = Column(String, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    items = relationship("OrderItemDB", back_populates="parent_order")
 
 class OrderItemDB(Base):
     __tablename__ = "order_items"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     order_id = Column(String, ForeignKey("orders.id"))
-    food_item_id = Column(String)
-    name = Column(String)
+    item_name = Column(String)
     quantity = Column(Integer)
-    price = Column(Float)
+    parent_order = relationship("OrderDB", back_populates="items")
 
 Base.metadata.create_all(bind=engine)
 
-# --- FastAPI App ---
+# --- APP INITIALIZATION ---
 app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# Enable CORS for React Frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # In production, replace with your frontend URL
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Dependency
 def get_db():
     db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    try: yield db
+    finally: db.close()
 
-# --- Schemas ---
+# --- SCHEMAS ---
 class LoginRequest(BaseModel):
     email: str
     password: str
 
-class OrderCreate(BaseModel):
-    userId: str
-    userName: str
-    items: List[dict]
-    total: float
-    paymentId: Optional[str] = "SIMULATED_PAYMENT"
+class FoodItemSchema(BaseModel):
+    name: str
+    description: str
+    price: float
+    category: str
+    image: str
+    available: bool = True
 
-# --- Endpoints ---
+# --- ENDPOINTS ---
 
 @app.post("/login")
 def login(req: LoginRequest, db: Session = Depends(get_db)):
+    if not req.email.lower().endswith(COLLEGE_DOMAIN):
+        raise HTTPException(status_code=403, detail=f"Use your {COLLEGE_DOMAIN} mail")
     user = db.query(UserDB).filter(UserDB.email == req.email, UserDB.password == req.password).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -98,69 +93,36 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 def get_menu(db: Session = Depends(get_db)):
     return db.query(FoodItemDB).all()
 
-@app.post("/orders")
-def place_order(order_data: OrderCreate, db: Session = Depends(get_db)):
-    order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
-    new_order = OrderDB(
-        id=order_id,
-        user_id=order_data.userId,
-        user_name=order_data.userName,
-        total=order_data.total,
-        status="pending",
-        payment_id=order_data.paymentId
-    )
-    db.add(new_order)
-    
-    for item in order_data.items:
-        db.add(OrderItemDB(
-            order_id=order_id,
-            food_item_id=item['id'],
-            name=item['name'],
-            quantity=item['quantity'],
-            price=item['price']
-        ))
-    
+@app.post("/menu")
+def add_menu_item(item: FoodItemSchema, db: Session = Depends(get_db)):
+    db_item = FoodItemDB(id=uuid.uuid4().hex[:8], **item.dict())
+    db.add(db_item)
     db.commit()
-    return {"order_id": order_id, "status": "success"}
+    return {"status": "success"}
+
+@app.delete("/menu/{item_id}")
+def delete_menu_item(item_id: str, db: Session = Depends(get_db)):
+    db_item = db.query(FoodItemDB).filter(FoodItemDB.id == item_id).first()
+    if db_item:
+        db.delete(db_item)
+        db.commit()
+        return {"status": "deleted"}
+    raise HTTPException(status_code=404, detail="Not found")
 
 @app.get("/admin/orders")
-def get_all_orders(db: Session = Depends(get_db)):
-    # This is what the Admin UI will poll
-    orders = db.query(OrderDB).order_by(OrderDB.order_time.desc()).all()
-    result = []
-    for o in orders:
-        items = db.query(OrderItemDB).filter(OrderItemDB.order_id == o.id).all()
-        result.append({
-            "id": o.id,
-            "userName": o.user_name,
-            "total": o.total,
-            "status": o.status,
-            "orderTime": o.order_time,
-            "items": items
-        })
-    return result
+def get_admin_orders(db: Session = Depends(get_db)):
+    orders = db.query(OrderDB).order_by(OrderDB.timestamp.desc()).all()
+    return [{
+        "id": o.id, "name": o.user_name, "email": o.user_email,
+        "total": o.total, "paid": o.payment_done, "time": o.timestamp.strftime("%H:%M"),
+        "items": [{"name": i.item_name, "qty": i.quantity} for i in o.items]
+    } for o in orders]
 
-@app.patch("/admin/orders/{order_id}")
-def update_status(order_id: str, status: str, db: Session = Depends(get_db)):
-    order = db.query(OrderDB).filter(OrderDB.id == order_id).first()
-    if order:
-        order.status = status
-        db.commit()
-        return {"status": "updated"}
-    raise HTTPException(status_code=404, detail="Order not found")
-
-# Initialize Data (Run once)
 @app.on_event("startup")
-def startup_populate():
+def startup():
     db = SessionLocal()
-    if db.query(FoodItemDB).count() == 0:
-        # Add mock items from your frontend data
-        items = [
-            FoodItemDB(id="1", name="Veggie Burger", price=149, category="Main Course", available=True),
-            FoodItemDB(id="2", name="Chicken Pizza", price=249, category="Main Course", available=True),
-        ]
-        db.add_all(items)
-        # Add default admin
-        db.add(UserDB(id="admin", name="Canteen Admin", email="admin@campus.edu", password="admin123", role="admin"))
+    if db.query(UserDB).count() == 0:
+        db.add(UserDB(id="adm", name="Admin", email=f"admin{COLLEGE_DOMAIN}", password="admin_cvr_123", role="canteen"))
+        db.add(UserDB(id="stu", name="Student", email=f"student{COLLEGE_DOMAIN}", password="student_cvr_123", role="student"))
         db.commit()
     db.close()

@@ -1,168 +1,123 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Plus, Minus, ShoppingCart } from 'lucide-react';
-import { mockFoodItems } from '../data/mockData';
 import { FoodItem, CartItem } from '../types';
 import { toast } from 'sonner';
-import { Toaster } from './ui/sonner';
+import { Toaster } from '../components/ui/sonner';
 
 export function MenuPage() {
+  // 1. Always initialize with an empty array [] to prevent '.map' is undefined errors
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const savedCart = localStorage.getItem('cart');
-    return savedCart ? JSON.parse(savedCart) : [];
+    const saved = localStorage.getItem('cart');
+    return saved ? JSON.parse(saved) : [];
   });
 
-  const categories = ['All', ...Array.from(new Set(mockFoodItems.map(item => item.category)))];
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/menu');
+        
+        // 2. Check if response is successful
+        if (!res.ok) {
+          throw new Error('Failed to fetch menu');
+        }
+
+        const data = await res.json();
+
+        // 3. Only update state if data is an actual array
+        if (Array.isArray(data)) {
+          setFoodItems(data);
+        } else {
+          console.error('Backend did not return an array:', data);
+          setFoodItems([]); // Fallback
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+        toast.error("Could not load menu. Using offline mode.");
+        setFoodItems([]); 
+      }
+    };
+
+    fetchMenu();
+  }, []);
 
   const updateCart = (newCart: CartItem[]) => {
     setCart(newCart);
     localStorage.setItem('cart', JSON.stringify(newCart));
-    // Trigger a storage event to update cart count in header
     window.dispatchEvent(new Event('storage'));
   };
 
   const addToCart = (item: FoodItem) => {
-    const existingItem = cart.find(cartItem => cartItem.id === item.id);
-    
-    if (existingItem) {
-      const newCart = cart.map(cartItem =>
-        cartItem.id === item.id
-          ? { ...cartItem, quantity: cartItem.quantity + 1 }
-          : cartItem
-      );
-      updateCart(newCart);
-      toast.success(`Added another ${item.name} to cart`);
+    const existing = cart.find(i => i.id === item.id);
+    if (existing) {
+      updateCart(cart.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
     } else {
-      const newCart = [...cart, { ...item, quantity: 1 }];
-      updateCart(newCart);
-      toast.success(`${item.name} added to cart`);
+      updateCart([...cart, { ...item, quantity: 1 }]);
     }
+    toast.success(`Added ${item.name}`);
   };
 
-  const removeFromCart = (item: FoodItem) => {
-    const existingItem = cart.find(cartItem => cartItem.id === item.id);
-    
-    if (existingItem && existingItem.quantity > 1) {
-      const newCart = cart.map(cartItem =>
-        cartItem.id === item.id
-          ? { ...cartItem, quantity: cartItem.quantity - 1 }
-          : cartItem
-      );
-      updateCart(newCart);
-      toast.info(`Removed one ${item.name} from cart`);
-    } else {
-      const newCart = cart.filter(cartItem => cartItem.id !== item.id);
-      updateCart(newCart);
-      toast.info(`${item.name} removed from cart`);
-    }
-  };
-
-  const getItemQuantity = (itemId: string) => {
-    const cartItem = cart.find(item => item.id === itemId);
-    return cartItem ? cartItem.quantity : 0;
-  };
+  // 4. Added defensive check (foodItems || []) to ensure map always works
+  const categories = ['All', ...Array.from(new Set((foodItems || []).map(item => item.category)))];
 
   const renderFoodItems = (category: string) => {
     const items = category === 'All' 
-      ? mockFoodItems 
-      : mockFoodItems.filter(item => item.category === category);
+      ? foodItems 
+      : foodItems.filter(item => item.category === category);
+
+    if (items.length === 0) {
+      return <div className="py-10 text-center text-gray-500">No items found in this category.</div>;
+    }
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {items.map((item) => {
-          const quantity = getItemQuantity(item.id);
-          return (
-            <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="relative h-40 sm:h-48 overflow-hidden bg-gray-100">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                />
-                {!item.available && (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                    <Badge variant="destructive">Out of Stock</Badge>
-                  </div>
-                )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {items.map((item) => (
+          <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+            <div className="h-48 overflow-hidden bg-gray-100">
+              <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+            </div>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <CardTitle>{item.name}</CardTitle>
+                <Badge variant="secondary">₹{item.price}</Badge>
               </div>
-              <CardHeader className="p-4 sm:p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-base sm:text-lg">{item.name}</CardTitle>
-                    <CardDescription className="mt-1 text-xs sm:text-sm">{item.description}</CardDescription>
-                  </div>
-                  <Badge variant="secondary" className="ml-2 text-sm sm:text-base">₹{item.price}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6 pt-0">
-                {quantity === 0 ? (
-                  <Button
-                    onClick={() => addToCart(item)}
-                    disabled={!item.available}
-                    className="w-full bg-orange-600 hover:bg-orange-700 h-10 sm:h-11"
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Add to Cart
-                  </Button>
-                ) : (
-                  <div className="flex items-center justify-between gap-2">
-                    <Button
-                      onClick={() => removeFromCart(item)}
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 sm:h-10 sm:w-10"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="font-semibold text-base sm:text-lg px-4">{quantity}</span>
-                    <Button
-                      onClick={() => addToCart(item)}
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 sm:h-10 sm:w-10"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+              <CardDescription>{item.description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => addToCart(item)} className="w-full bg-orange-600 hover:bg-orange-700">
+                <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-[1440px] mx-auto">
+    <div className="w-full px-4 py-8 max-w-[1440px] mx-auto">
       <Toaster />
-      
-      {/* Page Header */}
-      <div className="mb-6 sm:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Browse Menu</h2>
-        <p className="text-sm sm:text-base text-gray-600">Choose from our delicious selection of campus favorites</p>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900">Browse Menu</h2>
+        <p className="text-gray-600">Fresh food from your campus canteen</p>
       </div>
 
-      {/* Category Tabs */}
       <Tabs defaultValue="All" className="w-full">
-        <TabsList className="mb-6 sm:mb-8 flex flex-wrap h-auto gap-1 sm:gap-0 p-1">
-          {categories.map((category) => (
-            <TabsTrigger 
-              key={category} 
-              value={category} 
-              className="px-3 sm:px-6 py-2 text-xs sm:text-sm"
-            >
-              {category}
+        <TabsList className="mb-8 flex flex-wrap h-auto">
+          {categories.map(c => (
+            <TabsTrigger key={c} value={c} className="px-6 py-2">
+              {c}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {categories.map((category) => (
-          <TabsContent key={category} value={category}>
-            {renderFoodItems(category)}
+        {categories.map(c => (
+          <TabsContent key={c} value={c}>
+            {renderFoodItems(c)}
           </TabsContent>
         ))}
       </Tabs>

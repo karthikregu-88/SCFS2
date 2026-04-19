@@ -1,0 +1,50 @@
+scfs/
+├── backend/                # New Python Backend
+│   ├── main.py             # FastAPI application and SQLite setup
+│   └── scfs.db             # SQLite database file (generated on run)
+├── src/                    # Frontend source code
+│   ├── app/
+│   │   ├── components/     # Reusable UI components
+│   │   │   ├── ui/         # Shadcn/UI base components
+│   │   │   ├── figma/      # Design-specific components
+│   │   │   ├── CartItemCard.tsx
+│   │   │   ├── FoodCard.tsx
+│   │   │   ├── FoodItemDialog.tsx
+│   │   │   ├── Header.tsx
+│   │   │   ├── OrderCard.tsx
+│   │   │   └── ProtectedRoute.tsx
+│   │   ├── contexts/       # State management
+│   │   │   ├── AuthContext.tsx
+│   │   │   └── CartContext.tsx
+│   │   ├── data/
+│   │   │   └── mockData.ts    # Initial menu/category data
+│   │   ├── layouts/
+│   │   │   └── RootLayout.tsx
+│   │   ├── pages/          # Application views
+│   │   │   ├── AdminPage.tsx
+│   │   │   ├── CartPage.tsx
+│   │   │   ├── HomePage.tsx
+│   │   │   ├── LoginPage.tsx
+│   │   │   ├── MenuManagementPage.tsx
+│   │   │   ├── MenuPage.tsx
+│   │   │   ├── OrdersPage.tsx
+│   │   │   ├── ProfilePage.tsx
+│   │   │   └── RegisterPage.tsx
+│   │   ├── App.tsx         # Main application component
+│   │   ├── routes.tsx      # Client-side routing
+│   │   └── types.ts        # TypeScript interfaces
+│   ├── styles/             # Global CSS and themes
+│   │   ├── fonts.css
+│   │   ├── index.css
+│   │   ├── tailwind.css
+│   │   └── theme.css
+│   └── main.tsx            # Frontend entry point
+├── guidelines/
+│   └── Guidelines.md
+├── public/                 # Static assets
+├── index.html
+├── package.json
+├── pnpm-workspace.yaml
+├── postcss.config.mjs
+├── vite.config.ts
+└── README.md

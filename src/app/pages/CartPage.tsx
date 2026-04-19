@@ -65,15 +65,16 @@ export function CartPage() {
       onSuccess: async (response) => {
         // Send data to Python Backend
         try {
-          const backendResponse = await fetch('http://localhost:8000/orders', {
+          const backendResponse = await fetch('http://localhost:8000/place-order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: user.id || "1",
-              userName: user.name || "Student",
-              items: cart,
+              user_name: user.name || "Student",
+              user_email: user.email || "student@cvr.ac.in",
+              items: cart.map(item => ({ name: item.name, quantity: item.quantity })),
               total: totalAmount,
-              paymentId: response.razorpay_payment_id || "SIMULATED_ID"
+              payment_done: true,
+              razorpay_id: response.razorpay_payment_id || "SIMULATED_ID"
             }),
           });
 

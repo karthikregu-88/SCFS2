@@ -72,7 +72,9 @@ export const initiateRazorpayPayment = async (options: RazorpayOptions) => {
     name: RAZORPAY_CONFIG.name,
     description: RAZORPAY_CONFIG.description,
     image: RAZORPAY_CONFIG.image,
-    order_id: orderId,
+    notes: {
+      order_id: orderId,
+    },
     handler: function (response: any) {
       console.log('✅ Payment successful:', response);
       onSuccess(response);

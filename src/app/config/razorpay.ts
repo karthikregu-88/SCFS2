@@ -3,7 +3,7 @@
 
 export const RAZORPAY_CONFIG = {
   // Test Key - Replace with your actual Key ID from Razorpay Dashboard
-  key: 'rzp_test_YOUR_KEY_ID_HERE',
+  key: 'rzp_test_Sf5D8XjC3opbXX',
   
   // For production, use live key
   // key: 'rzp_live_YOUR_KEY_ID_HERE',
@@ -27,7 +27,7 @@ export const RAZORPAY_CONFIG = {
 };
 
 // Demo mode - When true, simulates payment without actual Razorpay integration
-export const DEMO_MODE = true;
+export const DEMO_MODE = false;
 
 // Instructions for setting up Razorpay:
 // 1. Sign up at https://razorpay.com/

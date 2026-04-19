@@ -6,11 +6,12 @@ import { Toaster } from 'sonner';
 import { LoginPage } from './pages/LoginPage';
 import { MenuPage } from './pages/MenuPage';
 
-// Import Components (Lines 7 & 8 are here)
+// Import Components
 import { StaffDashboard } from './components/StaffDashboard'; 
-import { Navbar } from './components/Navbar'; 
-// This MUST match the export name exactly
-import { AdminNavbar } from './components/AdminNavbar';
+// Fixed Line 11: Using Default Import (Common fix for "No matching export" error)
+import Navbar from './components/Navbar'; 
+// Fixed Line 13: Using Default Import to match common component structures
+import AdminNavbar from './components/AdminNavbar';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -30,7 +31,6 @@ export default function App() {
 
   if (loading) return null;
 
-  // If not logged in, show login page
   if (!user) {
     return (
       <>

@@ -5,6 +5,7 @@ import { Toaster } from 'sonner';
 // Import Pages
 import { LoginPage } from './pages/LoginPage';
 import { MenuPage } from './pages/MenuPage';
+import { CartPage } from './pages/CartPage';
 
 // Import Components
 import { StaffDashboard } from './components/StaffDashboard'; 
@@ -52,6 +53,10 @@ export default function App() {
           <Route 
             path="/menu" 
             element={user.role === 'student' ? <MenuPage /> : <Navigate to="/staff" replace />} 
+          />
+          <Route 
+            path="/cart" 
+            element={user.role === 'student' ? <CartPage /> : <Navigate to="/staff" replace />} 
           />
           <Route 
             path="/staff" 

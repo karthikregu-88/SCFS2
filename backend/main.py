@@ -28,10 +28,10 @@ class FoodItemDB(Base):
     __tablename__ = "food_items"
     id = Column(String, primary_key=True)
     name = Column(String)
-    description = Column(Text)
+    description = Column(Text, nullable=True)
     price = Column(Float)
     category = Column(String)
-    image = Column(Text) # Supports large Base64 strings
+    image = Column(Text)  # Optimized to store Base64 strings from camera/files
     available = Column(Boolean, default=True)
 
 class OrderDB(Base):
@@ -72,18 +72,30 @@ class LoginRequest(BaseModel):
 
 class FoodItemSchema(BaseModel):
     name: str
-    description: str
+    description: Optional[str] = ""
     price: float
     category: str
     image: str
     available: bool = True
+
+class CartItem(BaseModel):
+    name: str
+    quantity: int
+
+class OrderRequest(BaseModel):
+    user_name: str
+    user_email: str
+    total: float
+    items: List[CartItem]
+    payment_done: bool = False
+    razorpay_id: Optional[str] = None
 
 # --- ENDPOINTS ---
 
 @app.post("/login")
 def login(req: LoginRequest, db: Session = Depends(get_db)):
     if not req.email.lower().endswith(COLLEGE_DOMAIN):
-        raise HTTPException(status_code=403, detail=f"Use your {COLLEGE_DOMAIN} mail")
+        raise HTTPException(status_code=403, detail=f"Please use your {COLLEGE_DOMAIN} email")
     user = db.query(UserDB).filter(UserDB.email == req.email, UserDB.password == req.password).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -109,18 +121,49 @@ def delete_menu_item(item_id: str, db: Session = Depends(get_db)):
         return {"status": "deleted"}
     raise HTTPException(status_code=404, detail="Not found")
 
+# Endpoint for students to place orders
+@app.post("/place-order")
+def place_order(req: OrderRequest, db: Session = Depends(get_db)):
+    order_id = f"ORD-{uuid.uuid4().hex[:6].upper()}"
+    new_order = OrderDB(
+        id=order_id,
+        user_name=req.user_name,
+        user_email=req.user_email,
+        total=req.total,
+        payment_done=req.payment_done,
+        razorpay_id=req.razorpay_id
+    )
+    db.add(new_order)
+    
+    for item in req.items:
+        order_item = OrderItemDB(
+            order_id=order_id,
+            item_name=item.name,
+            quantity=item.quantity
+        )
+        db.add(order_item)
+    
+    db.commit()
+    return {"status": "success", "order_id": order_id}
+
+# Optimized Admin Endpoint to show student names, items bought, and payment status
 @app.get("/admin/orders")
 def get_admin_orders(db: Session = Depends(get_db)):
     orders = db.query(OrderDB).order_by(OrderDB.timestamp.desc()).all()
     return [{
-        "id": o.id, "name": o.user_name, "email": o.user_email,
-        "total": o.total, "paid": o.payment_done, "time": o.timestamp.strftime("%H:%M"),
+        "id": o.id, 
+        "name": o.user_name, 
+        "email": o.user_email,
+        "total": o.total, 
+        "paid": o.payment_done, 
+        "time": o.timestamp.strftime("%I:%M %p"),
         "items": [{"name": i.item_name, "qty": i.quantity} for i in o.items]
     } for o in orders]
 
 @app.on_event("startup")
 def startup():
     db = SessionLocal()
+    # Pre-populate roles for testing
     if db.query(UserDB).count() == 0:
         db.add(UserDB(id="adm", name="Admin", email=f"admin{COLLEGE_DOMAIN}", password="admin_cvr_123", role="canteen"))
         db.add(UserDB(id="stu", name="Student", email=f"student{COLLEGE_DOMAIN}", password="student_cvr_123", role="student"))

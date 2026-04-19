@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 // Fixed relative paths to your components
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -37,9 +37,9 @@ export function LoginPage() {
         
         // Match the role to your routes
         if (user.role === 'canteen') {
-          navigate('/staff');
+          window.location.href = '/staff';
         } else {
-          navigate('/menu');
+          window.location.href = '/menu';
         }
       } else {
         const errorData = await response.json();

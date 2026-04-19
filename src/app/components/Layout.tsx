@@ -1,4 +1,4 @@
-import { Outlet, useNavigate, useLocation } from 'react-router';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, UtensilsCrossed, ClipboardList, User, LogOut, Menu, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';

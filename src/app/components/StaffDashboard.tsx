@@ -90,27 +90,6 @@ export function StaffDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* PROFESSIONAL ADMIN HEADER */}
-      <nav className="bg-slate-900 text-white px-6 py-4 border-b border-slate-800 shadow-xl">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="bg-indigo-600 p-2 rounded-lg shadow-lg shadow-indigo-500/20">
-              <LayoutDashboard size={22} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tight leading-none uppercase">CVR Admin</h1>
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Canteen Management System</span>
-            </div>
-          </div>
-          <Button 
-            variant="ghost" 
-            className="text-slate-400 hover:text-white hover:bg-slate-800 gap-2"
-            onClick={() => { localStorage.clear(); window.location.reload(); }}
-          >
-            <LogOut size={18} /> <span className="text-xs font-bold uppercase">Logout</span>
-          </Button>
-        </div>
-      </nav>
 
       <div className="max-w-7xl mx-auto p-6 md:p-10 space-y-10">
         <Tabs defaultValue="orders" className="w-full">

@@ -97,6 +97,7 @@ export function StaffDashboard() {
         <Tabs defaultValue="orders" className="w-full">
           <TabsList className="bg-white border p-1.5 shadow-sm inline-flex mb-8">
             <TabsTrigger value="orders" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Active Orders</TabsTrigger>
+            <TabsTrigger value="history" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Order History</TabsTrigger>
             <TabsTrigger value="menu" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Canteen Menu</TabsTrigger>
             <TabsTrigger value="analysis" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Analysis</TabsTrigger>
           </TabsList>
@@ -104,7 +105,7 @@ export function StaffDashboard() {
           {/* TAB 1: STUDENT ORDERS VIEW */}
           <TabsContent value="orders">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {orders.length === 0 ? (
+              {orders.filter(o => o.status !== 'completed').length === 0 ? (
                 <div className="col-span-full py-32 text-center border-2 border-dashed border-slate-200 rounded-3xl">
                   <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Clock className="text-slate-300" size={32} />
@@ -112,7 +113,7 @@ export function StaffDashboard() {
                   <p className="text-slate-400 font-bold uppercase text-sm tracking-widest">No Active Orders found</p>
                 </div>
               ) : (
-                orders.map((order) => (
+                orders.filter(o => o.status !== 'completed').map((order) => (
                   <Card key={order.id} className="border-none shadow-lg hover:shadow-2xl transition-all duration-300 bg-white overflow-hidden group">
                     <div className={`h-1.5 w-full ${order.paid ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                     
@@ -180,6 +181,91 @@ export function StaffDashboard() {
                         </div>
                         <div className="text-2xl font-black text-indigo-700 flex items-center tracking-tighter">
                           <IndianRupee size={18} className="mr-0.5" />{order.total}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          {/* TAB 1.5: ORDER HISTORY VIEW */}
+          <TabsContent value="history">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {orders.filter(o => o.status === 'completed').length === 0 ? (
+                <div className="col-span-full py-32 text-center border-2 border-dashed border-slate-200 rounded-3xl">
+                  <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="text-slate-300" size={32} />
+                  </div>
+                  <p className="text-slate-400 font-bold uppercase text-sm tracking-widest">No Order History found</p>
+                </div>
+              ) : (
+                orders.filter(o => o.status === 'completed').map((order) => (
+                  <Card key={order.id} className="border-none shadow-md bg-slate-50 overflow-hidden group opacity-80 hover:opacity-100 transition-opacity">
+                    <div className="h-1.5 w-full bg-slate-300" />
+                    
+                    <CardHeader className="flex flex-row justify-between items-center py-4 bg-slate-100/50 px-6">
+                      <span className="text-[11px] font-black text-slate-400 tracking-widest">#{order.id}</span>
+                      <div className="flex items-center gap-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-8 bg-white border-slate-200 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                          onClick={async () => {
+                            try {
+                              await fetch(`http://localhost:8000/admin/orders/${order.id}/status`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ status: 'pending' })
+                              });
+                              refreshData();
+                              toast.success(`Order #${order.id} moved to Active Orders`);
+                            } catch (e) {
+                              toast.error('Failed to undo delivery status');
+                            }
+                          }}
+                        >
+                          Undo Delivery
+                        </Button>
+                        <Badge className="bg-slate-200 text-slate-600 border-none shadow-sm">
+                          DELIVERED
+                        </Badge>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="p-6 space-y-6 grayscale-[0.5]">
+                      {/* Student Info Section */}
+                      <div className="flex items-start gap-4">
+                        <div className="bg-slate-100 p-2.5 rounded-xl border border-slate-200">
+                          <User size={18} className="text-slate-400" />
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-600 leading-none mb-1">{order.name}</p>
+                          <p className="text-xs font-medium text-slate-400 flex items-center gap-1">
+                            <Mail size={12} /> {order.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Items List Section */}
+                      <div className="space-y-3 py-4 border-y border-slate-200">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Order Summary</p>
+                        {order.items?.map((item: any, i: number) => (
+                          <div key={i} className="flex justify-between items-center text-sm text-slate-500">
+                            <span className="font-bold">{item.name}</span>
+                            <span className="bg-slate-200 px-2 py-0.5 rounded-md font-black text-[10px]">x{item.qty}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Footer Section */}
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-black uppercase tracking-tighter">
+                          <Clock size={12} /> {order.time}
+                        </div>
+                        <div className="text-xl font-black text-slate-500 flex items-center tracking-tighter">
+                          <IndianRupee size={16} className="mr-0.5" />{order.total}
                         </div>
                       </div>
                     </CardContent>

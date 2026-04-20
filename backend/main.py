@@ -90,6 +90,9 @@ class OrderRequest(BaseModel):
     payment_done: bool = False
     razorpay_id: Optional[str] = None
 
+class StatusUpdateRequest(BaseModel):
+    status: str
+
 # --- ENDPOINTS ---
 
 @app.post("/login")
@@ -156,9 +159,19 @@ def get_admin_orders(db: Session = Depends(get_db)):
         "email": o.user_email,
         "total": o.total, 
         "paid": o.payment_done, 
+        "status": o.status,
         "time": o.timestamp.strftime("%I:%M %p"),
         "items": [{"name": i.item_name, "qty": i.quantity} for i in o.items]
     } for o in orders]
+
+@app.put("/admin/orders/{order_id}/status")
+def update_order_status(order_id: str, req: StatusUpdateRequest, db: Session = Depends(get_db)):
+    db_order = db.query(OrderDB).filter(OrderDB.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    db_order.status = req.status
+    db.commit()
+    return {"status": "success", "new_status": req.status}
 
 @app.on_event("startup")
 def startup():

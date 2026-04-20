@@ -75,6 +75,24 @@ export const initiateRazorpayPayment = async (options: RazorpayOptions) => {
     notes: {
       order_id: orderId,
     },
+    config: {
+      display: {
+        blocks: {
+          upi: {
+            name: 'Pay using UPI Apps',
+            instruments: [
+              {
+                method: 'upi'
+              }
+            ]
+          }
+        },
+        sequence: ['block.upi'],
+        preferences: {
+          show_default_blocks: true
+        }
+      }
+    },
     handler: function (response: any) {
       console.log('✅ Payment successful:', response);
       onSuccess(response);

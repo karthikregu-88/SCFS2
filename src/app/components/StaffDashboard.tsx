@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
+import { Checkbox } from './ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { 
   Camera, 
@@ -115,9 +116,34 @@ export function StaffDashboard() {
                     
                     <CardHeader className="flex flex-row justify-between items-center py-4 bg-slate-50/50 px-6">
                       <span className="text-[11px] font-black text-slate-400 tracking-widest">#{order.id}</span>
-                      <Badge className={order.paid ? "bg-emerald-100 text-emerald-700 border-none shadow-sm" : "bg-rose-100 text-rose-700 border-none shadow-sm"}>
-                        {order.paid ? "PAYMENT DONE" : "PENDING"}
-                      </Badge>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center space-x-2 bg-white px-2.5 py-1 rounded-md border shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                          <Checkbox 
+                            id={`delivered-${order.id}`} 
+                            checked={order.status === 'completed'}
+                            onCheckedChange={async (checked) => {
+                              const newStatus = checked ? 'completed' : 'pending';
+                              try {
+                                await fetch(`http://localhost:8000/admin/orders/${order.id}/status`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ status: newStatus })
+                                });
+                                refreshData();
+                                toast.success(`Order marked as ${checked ? 'Delivered' : 'Pending'}`);
+                              } catch (e) {
+                                toast.error('Failed to update status');
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`delivered-${order.id}`} className="text-[10px] font-bold uppercase tracking-widest cursor-pointer text-slate-600">
+                            Delivered
+                          </Label>
+                        </div>
+                        <Badge className={order.paid ? "bg-emerald-100 text-emerald-700 border-none shadow-sm" : "bg-rose-100 text-rose-700 border-none shadow-sm"}>
+                          {order.paid ? "PAYMENT DONE" : "PENDING"}
+                        </Badge>
+                      </div>
                     </CardHeader>
 
                     <CardContent className="p-6 space-y-6">
@@ -193,6 +219,21 @@ export function StaffDashboard() {
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Dish Name</Label>
                       <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Samosa" required className="bg-slate-50 border-none h-12" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Category</Label>
+                      <select 
+                        value={formData.category} 
+                        onChange={e => setFormData({...formData, category: e.target.value})} 
+                        className="flex h-12 w-full rounded-md bg-slate-50 border-none px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        required
+                      >
+                        <option value="Main Course">Main Course</option>
+                        <option value="Tiffins">Tiffins</option>
+                        <option value="Snacks">Snacks</option>
+                        <option value="Beverages">Beverages</option>
+                      </select>
                     </div>
 
                     <div className="space-y-2">

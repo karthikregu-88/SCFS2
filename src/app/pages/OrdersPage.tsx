@@ -15,7 +15,7 @@ export function OrdersPage() {
         const data = await response.json();
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
         // Filter orders for the logged-in user
-        setOrders(data.filter((o: any) => o.userName === currentUser.name));
+        setOrders(data.filter((o: any) => o.name === currentUser.name));
       }
     } catch (error) {
       console.error("Failed to fetch orders:", error);
@@ -27,21 +27,6 @@ export function OrdersPage() {
     const interval = setInterval(loadOrders, 5000);
     return () => clearInterval(interval);
   }, []);
-
-  const getStatusInfo = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return { label: 'Order Received', icon: Clock, color: 'bg-yellow-100 text-yellow-800', description: 'Waiting to be prepared' };
-      case 'preparing':
-        return { label: 'Preparing', icon: ChefHat, color: 'bg-blue-100 text-blue-800', description: 'Staff is cooking your food' };
-      case 'ready':
-        return { label: 'Ready for Pickup', icon: Package, color: 'bg-green-100 text-green-800', description: 'Collect at the counter' };
-      case 'completed':
-        return { label: 'Completed', icon: CheckCircle, color: 'bg-gray-100 text-gray-800', description: 'Order finished' };
-      default:
-        return { label: 'Unknown', icon: Clock, color: 'bg-gray-100', description: '' };
-    }
-  };
 
   if (orders.length === 0) {
     return (
@@ -56,26 +41,29 @@ export function OrdersPage() {
     <div className="w-full px-4 py-8 max-w-4xl mx-auto">
       <h2 className="text-3xl font-bold mb-6">My Orders</h2>
       <div className="space-y-6">
-        {orders.map((order) => {
-          const statusInfo = getStatusInfo(order.status);
-          const StatusIcon = statusInfo.icon;
+        {orders.map((order: any) => {
           return (
             <Card key={order.id}>
               <CardHeader className="bg-gray-50">
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle>Order #{order.id}</CardTitle>
-                    <CardDescription>{new Date(order.timestamp).toLocaleTimeString()}</CardDescription>
+                    <CardDescription>{order.time}</CardDescription>
                   </div>
-                  <Badge className={statusInfo.color}><StatusIcon className="h-3 w-3 mr-1" />{statusInfo.label}</Badge>
+                  <Badge className={order.paid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                    {order.paid ? (
+                      <><CheckCircle className="h-3 w-3 mr-1 inline" /> Payment Done</>
+                    ) : (
+                      <><Clock className="h-3 w-3 mr-1 inline" /> Pending Payment</>
+                    )}
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="space-y-3 mb-4">
-                  {order.items.map((item) => (
-                    <div key={item.id} className="flex justify-between">
-                      <span>{item.name} x {item.quantity}</span>
-                      <span>₹{(item.price * item.quantity).toFixed(2)}</span>
+                  {order.items.map((item: any, idx: number) => (
+                    <div key={idx} className="flex justify-between font-medium">
+                      <span>{item.name} x {item.qty}</span>
                     </div>
                   ))}
                 </div>

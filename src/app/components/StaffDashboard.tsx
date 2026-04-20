@@ -17,7 +17,8 @@ import {
   LayoutDashboard, 
   LogOut, 
   CheckCircle2, 
-  AlertCircle 
+  AlertCircle,
+  Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,6 +27,7 @@ export function StaffDashboard() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>('All');
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: '', price: 0, image: '', category: 'Main Course', description: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,16 +73,22 @@ export function StaffDashboard() {
     e.preventDefault();
     if (!formData.image) return toast.error("Please add a photo of the dish");
 
-    const res = await fetch('http://localhost:8000/menu', {
-      method: 'POST',
+    const url = editingItemId ? `http://localhost:8000/menu/${editingItemId}` : 'http://localhost:8000/menu';
+    const method = editingItemId ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method: method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     });
 
     if (res.ok) {
-      toast.success("Dish published to canteen menu");
+      toast.success(editingItemId ? "Dish updated successfully" : "Dish published to canteen menu");
       setFormData({ name: '', price: 0, image: '', category: 'Main Course', description: '' });
+      setEditingItemId(null);
       refreshData();
+    } else {
+      toast.error("Failed to save dish");
     }
   };
 
@@ -280,10 +288,23 @@ export function StaffDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
               {/* ENTRY PANEL */}
               <Card className="lg:col-span-1 shadow-2xl border-none h-fit rounded-3xl overflow-hidden">
-                <div className="bg-slate-900 p-6 text-white">
+                <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
                   <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-2">
-                    <Plus size={20} className="text-indigo-400" /> Add Dish
+                    <Plus size={20} className="text-indigo-400" /> {editingItemId ? "Edit Dish" : "Add Dish"}
                   </h2>
+                  {editingItemId && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-[10px] text-slate-400 hover:text-white uppercase tracking-widest px-2"
+                      onClick={() => {
+                        setEditingItemId(null);
+                        setFormData({ name: '', price: 0, image: '', category: 'Main Course', description: '' });
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
                 </div>
                 <CardContent className="p-6">
                   <form onSubmit={handleAddItem} className="space-y-6">
@@ -330,7 +351,7 @@ export function StaffDashboard() {
                     </div>
 
                     <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-14 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20">
-                      Publish Dish
+                      {editingItemId ? "Update Dish" : "Publish Dish"}
                     </Button>
                   </form>
                 </CardContent>
@@ -351,7 +372,26 @@ export function StaffDashboard() {
                         </div>
                         <p className="text-xl font-black text-indigo-600 tracking-tighter">₹{item.price}</p>
                       </div>
-                      <div className="flex justify-end pt-4">
+                      <div className="flex justify-end pt-4 gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-full"
+                          onClick={() => {
+                            setEditingItemId(item.id);
+                            setFormData({
+                              name: item.name,
+                              price: item.price,
+                              image: item.image,
+                              category: item.category,
+                              description: item.description || ''
+                            });
+                            // Scroll to top where the form is
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                        >
+                          <Pencil size={20}/>
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 

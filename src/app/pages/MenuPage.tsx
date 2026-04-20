@@ -52,6 +52,12 @@ export function MenuPage() {
   };
 
   const addToCart = (item: FoodItem) => {
+    const totalItems = cart.reduce((sum, current) => sum + current.quantity, 0);
+    if (totalItems >= 10) {
+      toast.error("You can only add up to 10 items to your cart.");
+      return;
+    }
+
     const existing = cart.find(i => i.id === item.id);
     if (existing) {
       updateCart(cart.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));

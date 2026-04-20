@@ -30,6 +30,14 @@ export function CartPage() {
   };
 
   const updateQuantity = (itemId: string, change: number) => {
+    if (change > 0) {
+      const totalItems = cart.reduce((sum, current) => sum + current.quantity, 0);
+      if (totalItems >= 10) {
+        toast.error("You can only have up to 10 items in your cart.");
+        return;
+      }
+    }
+
     const newCart = cart.map(item => {
       if (item.id === itemId) {
         const newQuantity = Math.max(0, item.quantity + change);

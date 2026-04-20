@@ -124,6 +124,22 @@ def delete_menu_item(item_id: str, db: Session = Depends(get_db)):
         return {"status": "deleted"}
     raise HTTPException(status_code=404, detail="Not found")
 
+@app.put("/menu/{item_id}")
+def update_menu_item(item_id: str, item: FoodItemSchema, db: Session = Depends(get_db)):
+    db_item = db.query(FoodItemDB).filter(FoodItemDB.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    db_item.name = item.name
+    db_item.description = item.description
+    db_item.price = item.price
+    db_item.category = item.category
+    db_item.image = item.image
+    db_item.available = item.available
+    
+    db.commit()
+    return {"status": "updated"}
+
 # Endpoint for students to place orders
 @app.post("/place-order")
 def place_order(req: OrderRequest, db: Session = Depends(get_db)):

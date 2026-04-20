@@ -160,6 +160,7 @@ def get_admin_orders(db: Session = Depends(get_db)):
         "total": o.total, 
         "paid": o.payment_done, 
         "status": o.status,
+        "date": o.timestamp.strftime("%Y-%m-%d"),
         "time": o.timestamp.strftime("%I:%M %p"),
         "items": [{"name": i.item_name, "qty": i.quantity} for i in o.items]
     } for o in orders]

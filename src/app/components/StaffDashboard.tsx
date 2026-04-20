@@ -25,6 +25,7 @@ export function StaffDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<string>('All');
   const [formData, setFormData] = useState({ name: '', price: 0, image: '', category: 'Main Course', description: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,6 +98,7 @@ export function StaffDashboard() {
           <TabsList className="bg-white border p-1.5 shadow-sm inline-flex mb-8">
             <TabsTrigger value="orders" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Active Orders</TabsTrigger>
             <TabsTrigger value="menu" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Canteen Menu</TabsTrigger>
+            <TabsTrigger value="analysis" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Analysis</TabsTrigger>
           </TabsList>
 
           {/* TAB 1: STUDENT ORDERS VIEW */}
@@ -282,6 +284,84 @@ export function StaffDashboard() {
                   </Card>
                 ))}
               </div>
+            </div>
+          </TabsContent>
+          {/* TAB 3: ANALYSIS VIEW */}
+          <TabsContent value="analysis">
+            <div className="max-w-4xl mx-auto">
+              <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">
+                <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-black uppercase tracking-widest flex items-center gap-3">
+                      <AlertCircle size={28} className="text-indigo-400" /> Item Popularity Ranking
+                    </h2>
+                    <p className="text-slate-400 text-sm mt-2 font-medium">Most ordered items based on {selectedDate === 'All' ? 'all' : selectedDate} orders</p>
+                  </div>
+                  {(() => {
+                    const uniqueDates = Array.from(new Set(orders.map(o => o.date).filter(Boolean)));
+                    return (
+                      <select 
+                        value={selectedDate} 
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="bg-slate-800 text-white border border-slate-700 rounded-lg px-4 py-2 font-bold text-sm focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="All">All Time</option>
+                        {uniqueDates.map(date => (
+                          <option key={date as string} value={date as string}>{date}</option>
+                        ))}
+                      </select>
+                    );
+                  })()}
+                </div>
+                <CardContent className="p-0">
+                  {(() => {
+                    const itemCounts: Record<string, number> = {};
+                    const filteredOrders = selectedDate === 'All' ? orders : orders.filter(o => o.date === selectedDate);
+                    filteredOrders.forEach(order => {
+                      order.items?.forEach((item: any) => {
+                        itemCounts[item.name] = (itemCounts[item.name] || 0) + item.qty;
+                      });
+                    });
+                    const rankedItems = Object.entries(itemCounts)
+                      .map(([name, count]) => ({ name, count }))
+                      .sort((a, b) => b.count - a.count);
+
+                    if (rankedItems.length === 0) {
+                      return (
+                        <div className="p-16 text-center text-slate-400 font-bold uppercase tracking-widest">
+                          No items have been ordered yet.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="divide-y divide-slate-100">
+                        {rankedItems.map((item, index) => (
+                          <div key={item.name} className="flex items-center justify-between p-6 hover:bg-slate-50 transition-colors">
+                            <div className="flex items-center gap-6">
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-xl shadow-md ${
+                                index === 0 ? 'bg-amber-100 text-amber-600' :
+                                index === 1 ? 'bg-slate-200 text-slate-600' :
+                                index === 2 ? 'bg-orange-100 text-orange-700' :
+                                'bg-indigo-50 text-indigo-600'
+                              }`}>
+                                #{index + 1}
+                              </div>
+                              <div>
+                                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">{item.name}</h3>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-3xl font-black text-indigo-600">{item.count}</span>
+                              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Orders</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Separator } from '../components/ui/separator';
@@ -10,7 +11,7 @@ export function OrdersPage() {
 
   const loadOrders = async () => {
     try {
-      const response = await fetch('http://localhost:8000/admin/orders');
+      const response = await fetch(`${API_BASE_URL}/admin/orders`);
       if (response.ok) {
         const data = await response.json();
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');

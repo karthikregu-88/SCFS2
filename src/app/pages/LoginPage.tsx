@@ -1,18 +1,21 @@
 import { useState } from 'react';
+import { API_BASE_URL } from '../config/api';
 import { useNavigate } from 'react-router-dom';
 // Fixed relative paths to your components
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
-import { UtensilsCrossed, Mail, Lock } from 'lucide-react';
+import { UtensilsCrossed, Mail, Lock, Settings, Server } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const COLLEGE_DOMAIN = "@cvr.ac.in"; 
+  const [showSettings, setShowSettings] = useState(false);
+  const [customIp, setCustomIp] = useState(localStorage.getItem('SERVER_IP') || '');
+  const COLLEGE_DOMAIN = "@cvr.ac.in";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +28,7 @@ export function LoginPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/login', {
+      const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -46,7 +49,8 @@ export function LoginPage() {
         toast.error(errorData.detail || "Invalid credentials");
       }
     } catch (err) {
-      toast.error("Server Offline", { description: "Is your Python backend running?" });
+      toast.error("Server Offline", { description: "Is your Python backend running? Check Server Configuration." });
+      setShowSettings(true);
     }
   };
 
@@ -93,6 +97,53 @@ export function LoginPage() {
               Sign In
             </Button>
           </form>
+
+          {/* SERVER SETTINGS TOGGLE */}
+          <div className="mt-6 text-center">
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className="text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1 mx-auto transition-colors focus:outline-none"
+            >
+              <Settings size={14} />
+              {showSettings ? "Hide Server Settings" : "Server Configuration"}
+            </button>
+          </div>
+
+          {/* SERVER SETTINGS PANEL */}
+          {showSettings && (
+            <div className="mt-4 p-4 bg-slate-50 border border-slate-100 rounded-lg animate-in fade-in slide-in-from-top-2 duration-200">
+              <Label className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-2">
+                <Server size={14} /> Backend Override URL
+              </Label>
+              <div className="flex gap-2 mt-2">
+                <Input 
+                  placeholder="e.g. http://192.168.0.x:8000" 
+                  value={customIp}
+                  onChange={(e) => setCustomIp(e.target.value)}
+                  className="text-xs h-8"
+                />
+                <Button 
+                  type="button" 
+                  size="sm"
+                  className="h-8 bg-slate-800 hover:bg-slate-900"
+                  onClick={() => {
+                    if (customIp.trim()) {
+                      localStorage.setItem('SERVER_IP', customIp.trim());
+                    } else {
+                      localStorage.removeItem('SERVER_IP');
+                    }
+                    toast.success("Settings saved! Reloading...");
+                    setTimeout(() => window.location.reload(), 1000);
+                  }}
+                >
+                  Save
+                </Button>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2 leading-tight">
+                Testing on a physical phone? Find your computer's local Wi-Fi IP address and enter it here.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

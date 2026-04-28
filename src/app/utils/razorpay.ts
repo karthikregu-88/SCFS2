@@ -1,8 +1,10 @@
 import { RAZORPAY_CONFIG, DEMO_MODE } from '../config/razorpay';
+import { Capacitor } from '@capacitor/core';
 
 declare global {
   interface Window {
     Razorpay: any;
+    RazorpayCheckout: any;
   }
 }
 
@@ -57,14 +59,6 @@ export const initiateRazorpayPayment = async (options: RazorpayOptions) => {
     return;
   }
 
-  // Real Razorpay integration
-  const scriptLoaded = await loadRazorpayScript();
-  
-  if (!scriptLoaded) {
-    onFailure({ error: 'Failed to load Razorpay SDK' });
-    return;
-  }
-
   const razorpayOptions = {
     key: RAZORPAY_CONFIG.key,
     amount: amount * 100, // Razorpay expects amount in paise
@@ -112,8 +106,33 @@ export const initiateRazorpayPayment = async (options: RazorpayOptions) => {
   };
 
   try {
-    const razorpay = new window.Razorpay(razorpayOptions);
-    razorpay.open();
+    if (Capacitor.isNativePlatform()) {
+      // 📱 NATIVE APP (Android/iOS)
+      // Use the Cordova plugin: window.RazorpayCheckout
+      window.RazorpayCheckout.open(
+        razorpayOptions,
+        function (successResponse: any) {
+          console.log('✅ Native Payment successful:', successResponse);
+          // Standardize response payload format if needed, though usually identical
+          onSuccess(successResponse);
+        },
+        function (errorResponse: any) {
+          console.error('❌ Native Payment failed:', errorResponse);
+          onFailure(errorResponse);
+        }
+      );
+    } else {
+      // 💻 WEB (Browser)
+      const scriptLoaded = await loadRazorpayScript();
+      
+      if (!scriptLoaded) {
+        onFailure({ error: 'Failed to load Razorpay SDK' });
+        return;
+      }
+      
+      const razorpay = new window.Razorpay(razorpayOptions);
+      razorpay.open();
+    }
   } catch (error) {
     console.error('Razorpay error:', error);
     onFailure(error);

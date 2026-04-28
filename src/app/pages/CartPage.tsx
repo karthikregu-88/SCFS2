@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config/api';
 import { useNavigate } from 'react-router-dom';
 // Fixed imports: pointed to ../components/ui/
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -73,7 +74,7 @@ export function CartPage() {
       onSuccess: async (response) => {
         // Send data to Python Backend
         try {
-          const backendResponse = await fetch('http://localhost:8000/place-order', {
+          const backendResponse = await fetch(`${API_BASE_URL}/place-order`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

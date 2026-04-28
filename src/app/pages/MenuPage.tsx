@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -19,7 +20,7 @@ export function MenuPage() {
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const res = await fetch('http://localhost:8000/menu');
+        const res = await fetch(`${API_BASE_URL}/menu`);
         
         // 2. Check if response is successful
         if (!res.ok) {

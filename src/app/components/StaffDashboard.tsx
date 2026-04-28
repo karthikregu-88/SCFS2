@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { API_BASE_URL } from '../config/api';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -34,13 +35,13 @@ export function StaffDashboard() {
   // 1. Data Refresh Logic (Polling every 5 seconds)
   const refreshData = async () => {
     try {
-      const menuRes = await fetch('http://localhost:8000/menu');
+      const menuRes = await fetch(`${API_BASE_URL}/menu`);
       if (menuRes.ok) {
         const data = await menuRes.json();
         setMenuItems(Array.isArray(data) ? data : []);
       }
 
-      const orderRes = await fetch('http://localhost:8000/admin/orders');
+      const orderRes = await fetch(`${API_BASE_URL}/admin/orders`);
       if (orderRes.ok) {
         const data = await orderRes.json();
         setOrders(Array.isArray(data) ? data : []);
@@ -73,7 +74,7 @@ export function StaffDashboard() {
     e.preventDefault();
     if (!formData.image) return toast.error("Please add a photo of the dish");
 
-    const url = editingItemId ? `http://localhost:8000/menu/${editingItemId}` : 'http://localhost:8000/menu';
+    const url = editingItemId ? `${API_BASE_URL}/menu/${editingItemId}` : `${API_BASE_URL}/menu`;
     const method = editingItemId ? 'PUT' : 'POST';
 
     const res = await fetch(url, {
@@ -103,11 +104,11 @@ export function StaffDashboard() {
 
       <div className="max-w-7xl mx-auto p-6 md:p-10 space-y-10">
         <Tabs defaultValue="orders" className="w-full">
-          <TabsList className="bg-white border p-1.5 shadow-sm inline-flex mb-8">
-            <TabsTrigger value="orders" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Active Orders</TabsTrigger>
-            <TabsTrigger value="history" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Order History</TabsTrigger>
-            <TabsTrigger value="menu" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Canteen Menu</TabsTrigger>
-            <TabsTrigger value="analysis" className="px-12 py-2.5 font-bold uppercase text-xs tracking-widest">Analysis</TabsTrigger>
+          <TabsList className="bg-white border p-1.5 shadow-sm flex overflow-x-auto w-full md:inline-flex mb-8 justify-start snap-x no-scrollbar">
+            <TabsTrigger value="orders" className="px-6 md:px-12 py-2.5 font-bold uppercase text-xs tracking-widest whitespace-nowrap snap-start shrink-0">Active Orders</TabsTrigger>
+            <TabsTrigger value="history" className="px-6 md:px-12 py-2.5 font-bold uppercase text-xs tracking-widest whitespace-nowrap snap-start shrink-0">Order History</TabsTrigger>
+            <TabsTrigger value="menu" className="px-6 md:px-12 py-2.5 font-bold uppercase text-xs tracking-widest whitespace-nowrap snap-start shrink-0">Canteen Menu</TabsTrigger>
+            <TabsTrigger value="analysis" className="px-6 md:px-12 py-2.5 font-bold uppercase text-xs tracking-widest whitespace-nowrap snap-start shrink-0">Analysis</TabsTrigger>
           </TabsList>
 
           {/* TAB 1: STUDENT ORDERS VIEW */}
@@ -135,7 +136,7 @@ export function StaffDashboard() {
                             onCheckedChange={async (checked) => {
                               const newStatus = checked ? 'completed' : 'pending';
                               try {
-                                await fetch(`http://localhost:8000/admin/orders/${order.id}/status`, {
+                                await fetch(`${API_BASE_URL}/admin/orders/${order.id}/status`, {
                                   method: 'PUT',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ status: newStatus })
@@ -222,7 +223,7 @@ export function StaffDashboard() {
                           className="h-8 bg-white border-slate-200 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
                           onClick={async () => {
                             try {
-                              await fetch(`http://localhost:8000/admin/orders/${order.id}/status`, {
+                              await fetch(`${API_BASE_URL}/admin/orders/${order.id}/status`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ status: 'pending' })
@@ -398,7 +399,7 @@ export function StaffDashboard() {
                           className="text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full"
                           onClick={async () => {
                             if(window.confirm("Remove this dish from the canteen?")) {
-                              await fetch(`http://localhost:8000/menu/${item.id}`, { method: 'DELETE' });
+                              await fetch(`${API_BASE_URL}/menu/${item.id}`, { method: 'DELETE' });
                               refreshData();
                             }
                           }}
@@ -416,12 +417,12 @@ export function StaffDashboard() {
           <TabsContent value="analysis">
             <div className="max-w-4xl mx-auto">
               <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">
-                <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+                <div className="bg-slate-900 p-6 md:p-8 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0">
                   <div>
-                    <h2 className="text-2xl font-black uppercase tracking-widest flex items-center gap-3">
-                      <AlertCircle size={28} className="text-indigo-400" /> Item Popularity Ranking
+                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-widest flex items-center gap-3">
+                      <AlertCircle size={28} className="text-indigo-400 shrink-0" /> Item Popularity Ranking
                     </h2>
-                    <p className="text-slate-400 text-sm mt-2 font-medium">Most ordered items based on {selectedDate === 'All' ? 'all' : selectedDate} orders</p>
+                    <p className="text-slate-400 text-xs md:text-sm mt-2 font-medium">Most ordered items based on {selectedDate === 'All' ? 'all' : selectedDate} orders</p>
                   </div>
                   {(() => {
                     const uniqueDates = Array.from(new Set(orders.map(o => o.date).filter(Boolean)));
